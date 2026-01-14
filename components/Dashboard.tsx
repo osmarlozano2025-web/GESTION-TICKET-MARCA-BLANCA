@@ -1,30 +1,71 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Header } from './Header';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-
-const dataWeekly = [
-  { date: '18 Oct', nuevos: 12, espera: 18, solucionados: 25 },
-  { date: '19 Oct', nuevos: 20, espera: 12, solucionados: 30 },
-  { date: '20 Oct', nuevos: 15, espera: 25, solucionados: 20 },
-  { date: '21 Oct', nuevos: 30, espera: 15, solucionados: 35 },
-  { date: '22 Oct', nuevos: 10, espera: 20, solucionados: 45 },
-  { date: '23 Oct', nuevos: 8, espera: 12, solucionados: 15 },
-  { date: '24 Oct', nuevos: 5, espera: 10, solucionados: 10 },
-];
-
-const mainStats = [
-  { label: 'Total de tickets', count: '154', amount: '$42,500', color: 'text-white', status: 'Consolidado global', dot: 'bg-slate-400' },
-  { label: 'Aceptado', count: '32', amount: '$12,200', color: 'text-primary', status: 'Por cobrar', dot: 'bg-primary' },
-  { label: 'En espera', count: '48', amount: '$18,450', color: 'text-accent-blue', status: 'Pendiente de aprobación', dot: 'bg-accent-blue' },
-  { label: 'Solucionado', count: '64', amount: '$10,800', color: 'text-emerald-500', status: 'Ya recaudado', dot: 'bg-emerald-500' },
-  { label: 'Cerrado', count: '10', amount: '$1,050', color: 'text-slate-500', status: 'Perdido', dot: 'bg-slate-600' }
-];
+import { api } from '../api.service';
+import { Ticket } from '../types';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [range, setRange] = useState<'week' | 'month'>('week');
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    amount: 0,
+    accepted: 0,
+    waiting: 0,
+    solved: 0,
+    closed: 0
+  });
+
+  const dataWeekly = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      const dateStr = d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+      return {
+        date: dateStr,
+        nuevos: tickets.filter(t => t.status === 'Pendiente').length,
+        espera: tickets.filter(t => t.status === 'En Proceso').length,
+        solucionados: tickets.filter(t => t.status === 'Solucionado').length
+      };
+    });
+  }, [tickets]);
+
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const data = await api.getTickets();
+        if (Array.isArray(data)) {
+          setTickets(data);
+
+          // Calcular estadísticas reales
+          const s = {
+            total: data.length,
+            amount: data.reduce((acc, t) => acc + (Number(t.amount) || 0), 0),
+            accepted: data.filter(t => t.status === 'Aprobado').length,
+            waiting: data.filter(t => t.status === 'Pendiente' || t.status === 'En Proceso').length,
+            solved: data.filter(t => t.status === 'Solucionado').length,
+            closed: data.filter(t => t.status === 'Cerrado').length
+          };
+          setStats(s);
+        }
+      } catch (e) {
+        console.error("Dashboard load failed", e);
+      }
+    };
+    fetchDashboardData();
+  }, []);
+
+  const mainStats = [
+    { label: 'Total de tickets', count: stats.total.toString(), amount: `$${stats.amount.toLocaleString()}`, color: 'text-white', status: 'Consolidado global', dot: 'bg-slate-400' },
+    { label: 'Aceptado', count: stats.accepted.toString(), amount: '-', color: 'text-primary', status: 'Por cobrar', dot: 'bg-primary' },
+    { label: 'En espera', count: stats.waiting.toString(), amount: '-', color: 'text-accent-blue', status: 'Pendiente de aprobación', dot: 'bg-accent-blue' },
+    { label: 'Solucionado', count: stats.solved.toString(), amount: '-', color: 'text-emerald-500', status: 'Ya recaudado', dot: 'bg-emerald-500' },
+    { label: 'Cerrado', count: stats.closed.toString(), amount: '-', color: 'text-slate-500', status: 'Finalizado', dot: 'bg-slate-600' }
+  ];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background-dark/95">
@@ -52,7 +93,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="mt-4 pt-4 border-t border-white/5">
                 <div className="px-3 py-1 rounded-full bg-white/[0.03] text-white/40 text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-white/5 w-fit">
-                   {stat.status}
+                  {stat.status}
                 </div>
               </div>
             </div>

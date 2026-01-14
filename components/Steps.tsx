@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../api.service';
 
 const Card: React.FC<{ children: React.ReactNode; title?: string; subtitle?: string }> = ({ children, title, subtitle }) => (
   <div className="bg-card-dark border border-white/10 rounded-xl overflow-hidden shadow-2xl animate-fadeIn">
@@ -30,6 +31,33 @@ const Select: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) 
 
 export const Step1: React.FC = () => {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    priority: 'Media',
+    description: '',
+    type: 'Correctivo'
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleNext = async () => {
+    setLoading(true);
+    try {
+      const result = await api.createTicket({
+        priority: formData.priority,
+        description: formData.description,
+        type: formData.type,
+        status: 'Pendiente'
+      });
+      if (result.success) {
+        localStorage.setItem('current_ticket_id', result.id);
+        navigate('/step2');
+      }
+    } catch (e) {
+      console.error("Error creating ticket", e);
+      navigate('/step2');
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="mb-4">
@@ -40,26 +68,35 @@ export const Step1: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-1">
             <Label>ID de Referencia</Label>
-            <Input placeholder="Eje: TK-2024-8829" />
+            <Input placeholder="Automático" disabled value="Generado por sistema" />
           </div>
           <div className="space-y-1">
             <Label>Nivel de Prioridad</Label>
-            <Select>
-              <option>Baja (SLA 48h)</option>
-              <option>Media (SLA 24h)</option>
-              <option>Alta (SLA 4h)</option>
-              <option>Crítica (SLA 2h)</option>
+            <Select value={formData.priority} onChange={(e: any) => setFormData({ ...formData, priority: e.target.value })}>
+              <option value="Baja">Baja (SLA 48h)</option>
+              <option value="Media">Media (SLA 24h)</option>
+              <option value="Alta">Alta (SLA 4h)</option>
+              <option value="Crítica">Crítica (SLA 2h)</option>
             </Select>
           </div>
           <div className="md:col-span-2 space-y-1">
             <Label>Descripción del Fallo</Label>
-            <textarea className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-primary outline-none h-32 transition-all placeholder:text-white/20" placeholder="Detalle el problema observado en sitio..."></textarea>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-sm text-white focus:border-primary outline-none h-32 transition-all placeholder:text-white/20"
+              placeholder="Detalle el problema observado en sitio..."
+            ></textarea>
           </div>
         </div>
         <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
           <button onClick={() => navigate('/tickets')} className="px-6 py-2.5 text-white/40 font-bold text-xs uppercase tracking-widest hover:text-white transition-colors">Cancelar</button>
-          <button onClick={() => navigate('/step2')} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(242,162,13,0.2)] hover:scale-[1.02] transition-all">
-            Siguiente Paso <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+          <button
+            onClick={handleNext}
+            disabled={loading}
+            className={`bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(242,162,13,0.2)] hover:scale-[1.02] transition-all ${loading ? 'opacity-50' : ''}`}
+          >
+            {loading ? 'Guardando...' : 'Siguiente Paso'} <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
           </button>
         </div>
       </Card>
@@ -69,6 +106,18 @@ export const Step1: React.FC = () => {
 
 export const Step2: React.FC = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    const id = localStorage.getItem('current_ticket_id');
+    if (id) {
+      await api.updateTicket({ id, status: 'Aprobado' });
+    }
+    navigate('/step3');
+    setLoading(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="mb-4">
@@ -104,8 +153,8 @@ export const Step2: React.FC = () => {
           <button onClick={() => navigate('/step1')} className="flex items-center gap-2 px-6 py-2.5 text-white/40 font-bold text-xs uppercase tracking-widest hover:text-white transition-colors">
             <span className="material-symbols-outlined text-sm font-bold">arrow_back</span> Atrás
           </button>
-          <button onClick={() => navigate('/step3')} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(242,162,13,0.2)] hover:scale-[1.02] transition-all">
-            Confirmar Plan <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
+          <button onClick={handleConfirm} disabled={loading} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(242,162,13,0.2)] hover:scale-[1.02] transition-all">
+            {loading ? 'Confirmando...' : 'Confirmar Plan'} <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
           </button>
         </div>
       </Card>
@@ -116,6 +165,17 @@ export const Step2: React.FC = () => {
 export const Step3: React.FC = () => {
   const navigate = useNavigate();
   const [arrived, setArrived] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleFinishWork = async () => {
+    setLoading(true);
+    const id = localStorage.getItem('current_ticket_id');
+    if (id) {
+      await api.updateTicket({ id, status: 'En Proceso' });
+    }
+    navigate('/step4');
+    setLoading(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -168,8 +228,8 @@ export const Step3: React.FC = () => {
           <button onClick={() => navigate('/step2')} className="flex items-center gap-2 px-6 py-2.5 text-white/40 font-bold text-xs uppercase tracking-widest hover:text-white transition-colors">
             <span className="material-symbols-outlined text-sm font-bold">arrow_back</span> Atrás
           </button>
-          <button onClick={() => navigate('/step4')} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:scale-[1.02] transition-all">
-            Finalizar Trabajo <span className="material-symbols-outlined text-sm font-bold">send</span>
+          <button onClick={handleFinishWork} disabled={loading} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:scale-[1.02] transition-all">
+            {loading ? 'Enviando...' : 'Finalizar Trabajo'} <span className="material-symbols-outlined text-sm font-bold">send</span>
           </button>
         </div>
       </Card>
@@ -179,6 +239,18 @@ export const Step3: React.FC = () => {
 
 export const Step4: React.FC = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleBudget = async () => {
+    setLoading(true);
+    const id = localStorage.getItem('current_ticket_id');
+    if (id) {
+      await api.updateTicket({ id, budget_amount: 225, budget_status: 'PE' });
+    }
+    navigate('/step5');
+    setLoading(false);
+  }
+
   return (
     <div className="space-y-6">
       <div className="mb-4">
@@ -228,8 +300,8 @@ export const Step4: React.FC = () => {
           <button onClick={() => navigate('/step3')} className="flex items-center gap-2 px-6 py-2.5 text-white/40 font-bold text-xs uppercase tracking-widest hover:text-white transition-colors">
             <span className="material-symbols-outlined text-sm font-bold">arrow_back</span> Atrás
           </button>
-          <button onClick={() => navigate('/step5')} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:scale-[1.02] transition-all">
-            Enviar a Revisión <span className="material-symbols-outlined text-sm font-bold">receipt_long</span>
+          <button onClick={handleBudget} disabled={loading} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:scale-[1.02] transition-all">
+            {loading ? 'Procesando...' : 'Enviar a Revisión'} <span className="material-symbols-outlined text-sm font-bold">receipt_long</span>
           </button>
         </div>
       </Card>
@@ -239,6 +311,18 @@ export const Step4: React.FC = () => {
 
 export const Step5: React.FC = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleSolve = async () => {
+    setLoading(true);
+    const id = localStorage.getItem('current_ticket_id');
+    if (id) {
+      await api.updateTicket({ id, status: 'Solucionado' });
+    }
+    navigate('/step6');
+    setLoading(false);
+  }
+
   return (
     <div className="space-y-6">
       <div className="mb-4">
@@ -263,8 +347,8 @@ export const Step5: React.FC = () => {
           <button onClick={() => navigate('/step4')} className="flex items-center gap-2 px-6 py-2.5 text-white/40 font-bold text-xs uppercase tracking-widest hover:text-white transition-colors">
             <span className="material-symbols-outlined text-sm font-bold">arrow_back</span> Atrás
           </button>
-          <button onClick={() => navigate('/step6')} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:scale-[1.02] transition-all">
-            Cerrar Técnico <span className="material-symbols-outlined text-sm font-bold">verified</span>
+          <button onClick={handleSolve} disabled={loading} className="bg-primary text-background-dark px-10 py-3 rounded-lg font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-xl hover:scale-[1.02] transition-all">
+            {loading ? 'Finalizando...' : 'Cerrar Técnico'} <span className="material-symbols-outlined text-sm font-bold">verified</span>
           </button>
         </div>
       </Card>
@@ -274,6 +358,19 @@ export const Step5: React.FC = () => {
 
 export const Step6: React.FC = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
+  const handleClose = async () => {
+    setLoading(true);
+    const id = localStorage.getItem('current_ticket_id');
+    if (id) {
+      await api.updateTicket({ id, status: 'Cerrado' });
+      localStorage.removeItem('current_ticket_id');
+    }
+    navigate('/tickets');
+    setLoading(false);
+  }
+
   return (
     <div className="space-y-6">
       <div className="mb-4 text-center">
@@ -310,8 +407,8 @@ export const Step6: React.FC = () => {
           </div>
         </div>
         <div className="flex justify-center pt-8">
-          <button onClick={() => navigate('/tickets')} className="bg-primary text-background-dark px-16 py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 transition-all">
-            Volver al Panel Principal
+          <button onClick={handleClose} disabled={loading} className="bg-primary text-background-dark px-16 py-4 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:scale-105 transition-all">
+            {loading ? 'Terminando...' : 'Volver al Panel Principal'}
           </button>
         </div>
       </Card>
