@@ -7,7 +7,7 @@ export const Inventory: React.FC = () => {
     { name: 'Ventilador Industrial 12"', stock: 42, min: 10, unit: 'pzs', price: '$45.00' },
     { name: 'Cable UTP Cat6 305m', stock: 5, min: 8, unit: 'rollos', price: '$120.00', low: true },
     { name: 'Sensor de Proximidad Laser', stock: 124, min: 50, unit: 'pzs', price: '$22.50' },
-    { name: 'Kit de Soldadura Pro', stock: 3, min: 5, unit: 'sets', price: '$350.00', low: true }
+    { name: 'Kit de Soldadura Flow', stock: 3, min: 5, unit: 'sets', price: '$350.00', low: true }
   ];
 
   return (

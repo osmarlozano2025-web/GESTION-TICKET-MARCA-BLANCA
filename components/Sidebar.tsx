@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [companyInfo, setCompanyInfo] = useState({ name: 'TechOps', tagline: 'Pro Control', logo: '' });
+  const [companyInfo, setCompanyInfo] = useState({ name: 'Impulso Digital', tagline: 'Estrategia Operativa', logo: '/logo.png' });
 
   useEffect(() => {
     const updateBrand = () => {
@@ -13,9 +13,9 @@ export const Sidebar: React.FC = () => {
       if (saved) {
         const parsed = JSON.parse(saved);
         setCompanyInfo({
-          name: parsed.name || 'TechOps',
-          tagline: parsed.tagline || 'Pro Control',
-          logo: parsed.logoUrl || ''
+          name: parsed.name || 'Impulso Digital',
+          tagline: parsed.tagline || 'Estrategia Operativa',
+          logo: parsed.logoUrl || '/logo.png'
         });
       }
     };
@@ -47,7 +47,7 @@ export const Sidebar: React.FC = () => {
             {companyInfo.logo ? (
               <img src={companyInfo.logo} className="w-full h-full object-cover" alt="Logo" />
             ) : (
-              <span className="material-symbols-outlined font-bold">query_stats</span>
+              <span className="material-symbols-outlined font-bold">rocket_launch</span>
             )}
           </div>
           <div className="min-w-0">
@@ -60,10 +60,10 @@ export const Sidebar: React.FC = () => {
 
         <nav className="space-y-1">
           <NavItem to="/" icon="dashboard" label="Dashboard" />
-          
+
           <SectionLabel label="Operaciones" />
           <div className="space-y-1">
-             <Link to="/tickets" className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${location.pathname.includes('/tickets') || location.pathname.includes('/step') ? 'text-primary bg-primary/5' : 'text-slate-500 hover:text-white'}`}>
+            <Link to="/tickets" className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${location.pathname.includes('/tickets') || location.pathname.includes('/step') ? 'text-primary bg-primary/5' : 'text-slate-500 hover:text-white'}`}>
               <span className="material-symbols-outlined text-[20px]">confirmation_number</span>
               <span className="text-sm font-semibold">Tickets</span>
               <span className="material-symbols-outlined ml-auto text-sm opacity-40">chevron_right</span>
@@ -87,7 +87,7 @@ export const Sidebar: React.FC = () => {
       <div className="mt-auto p-4 border-t border-white/5 bg-white/[0.02]">
         <div className="flex items-center gap-3 p-2 bg-white/5 rounded-2xl border border-white/5">
           <div className="size-10 rounded-xl bg-slate-800 overflow-hidden ring-2 ring-primary/20">
-            <img alt="Admin" src="https://picsum.photos/seed/techadmin/100/100" className="w-full h-full object-cover"/>
+            <img alt="Admin" src="https://picsum.photos/seed/techadmin/100/100" className="w-full h-full object-cover" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-black text-white truncate">Alex Operador</p>
