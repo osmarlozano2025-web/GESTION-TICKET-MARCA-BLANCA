@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../api.service';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -8,14 +9,13 @@ export const Sidebar: React.FC = () => {
   const [companyInfo, setCompanyInfo] = useState({ name: 'Impulso Digital', tagline: 'Estrategia Operativa', logo: '/logo.png' });
 
   useEffect(() => {
-    const updateBrand = () => {
-      const saved = localStorage.getItem('company_settings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+    const updateBrand = async () => {
+      const data = await api.getSettings();
+      if (data && !data.error) {
         setCompanyInfo({
-          name: parsed.name || 'Impulso Digital',
-          tagline: parsed.tagline || 'Estrategia Operativa',
-          logo: parsed.logoUrl || '/logo.png'
+          name: data.name || 'Impulso Digital',
+          tagline: data.tagline || 'Estrategia Operativa',
+          logo: data.logo_url || '/logo.png'
         });
       }
     };

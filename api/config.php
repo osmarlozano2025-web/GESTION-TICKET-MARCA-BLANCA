@@ -12,21 +12,22 @@
 // ============================================
 // Encuentra estos datos en: Hostinger > Bases de Datos > Detalles
 define('DB_HOST', 'localhost');           // Generalmente es localhost en Hostinger
-define('DB_NAME', 'u123456789_impulso');  // Nombre de tu base de datos
-define('DB_USER', 'u123456789_admin');    // Usuario de la base de datos
-define('DB_PASS', 'TuContraseñaSegura');  // Contraseña de la base de datos
+define('DB_NAME', 'u519024156_impulso_db');  // Nombre de tu base de datos
+define('DB_USER', 'u519024156_admin_gestion');    // Usuario de la base de datos
+define('DB_PASS', '@Tobias09');  // Contraseña de la base de datos
 
 // ============================================
 // CONFIGURACIÓN DE LA APLICACIÓN
 // ============================================
-define('APP_URL', 'https://tudominio.com');          // URL de tu sitio
-define('API_URL', 'https://tudominio.com/api');      // URL de la API
+define('APP_URL', 'https://nazadigital.de');          // URL de tu sitio
+define('API_URL', 'https://nazadigital.de/api');      // URL de la API
 define('UPLOAD_PATH', __DIR__ . '/../uploads/');     // Carpeta de subidas
 
 // ============================================
 // CONEXIÓN PDO A MYSQL
 // ============================================
-function getConnection() {
+function getConnection()
+{
     try {
         $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
         $options = [
@@ -44,12 +45,13 @@ function getConnection() {
 // ============================================
 // HEADERS CORS (para que React pueda conectar)
 // ============================================
-function setCorsHeaders() {
+function setCorsHeaders()
+{
     header("Access-Control-Allow-Origin: *");
     header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization");
     header("Content-Type: application/json; charset=UTF-8");
-    
+
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(200);
         exit();
@@ -59,13 +61,15 @@ function setCorsHeaders() {
 // ============================================
 // FUNCIONES DE UTILIDAD
 // ============================================
-function jsonResponse($data, $code = 200) {
+function jsonResponse($data, $code = 200)
+{
     http_response_code($code);
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit();
 }
 
-function getJsonInput() {
+function getJsonInput()
+{
     return json_decode(file_get_contents('php://input'), true) ?? [];
 }
 ?>

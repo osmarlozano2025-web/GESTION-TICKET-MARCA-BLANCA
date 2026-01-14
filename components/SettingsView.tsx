@@ -2,23 +2,39 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './Header';
 import { CompanySettings } from '../types';
+import { api } from '../api.service';
 
 export const SettingsView: React.FC = () => {
-  const [companySettings, setCompanySettings] = useState<CompanySettings>(() => {
-    const saved = localStorage.getItem('company_settings');
-    return saved ? JSON.parse(saved) : {
-      name: 'Impulso Digital',
-      tagline: 'Estrategia Operativa',
-      logoUrl: '/logo.png',
-      primaryColor: '#f2a20d'
-    };
+  const [companySettings, setCompanySettings] = useState<CompanySettings>({
+    name: 'Impulso Digital',
+    tagline: 'Estrategia Operativa',
+    logoUrl: '/logo.png',
+    primaryColor: '#f2a20d'
   });
+
+  useEffect(() => {
+    api.getSettings().then(data => {
+      if (data && !data.error) {
+        setCompanySettings({
+          name: data.name,
+          tagline: data.tagline,
+          logoUrl: data.logo_url || '/logo.png',
+          primaryColor: data.primary_color
+        });
+      }
+    });
+  }, []);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const saveSettings = (newSettings: CompanySettings) => {
+  const saveSettings = async (newSettings: CompanySettings) => {
     setCompanySettings(newSettings);
-    localStorage.setItem('company_settings', JSON.stringify(newSettings));
+    await api.updateSettings({
+      name: newSettings.name,
+      tagline: newSettings.tagline,
+      logo_url: newSettings.logoUrl,
+      primary_color: newSettings.primaryColor
+    });
     window.dispatchEvent(new Event('company_settings_updated'));
   };
 
