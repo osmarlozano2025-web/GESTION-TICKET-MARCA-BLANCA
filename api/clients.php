@@ -1,91 +1,102 @@
 <?php
-/**
- * API: Clients
- * Endpoints para gestión de clientes
- */
-require_once __DIR__ . '/config.php';
-setCorsHeaders();
+// api/clients.php
 
+require_once 'db.php';
+
+$conn = connect_db();
 $method = $_SERVER['REQUEST_METHOD'];
-$pdo = getConnection();
 
 switch ($method) {
     case 'GET':
         if (isset($_GET['id'])) {
-            $stmt = $pdo->prepare("SELECT * FROM clients WHERE id = ?");
-            $stmt->execute([$_GET['id']]);
-            $client = $stmt->fetch();
-
-            if ($client) {
-                // Obtener sucursales del cliente
-                $storesStmt = $pdo->prepare("SELECT * FROM stores WHERE client_id = ?");
-                $storesStmt->execute([$_GET['id']]);
-                $client['stores'] = $storesStmt->fetchAll();
-
-                // Contar tickets activos
-                $ticketsStmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE client_id = ? AND status NOT IN ('Cerrado', 'Solucionado')");
-                $ticketsStmt->execute([$_GET['id']]);
-                $client['active_tickets'] = $ticketsStmt->fetch()['count'];
+            // Obtener un solo cliente por ID
+            $id = intval($_GET['id']);
+            $sql = "SELECT c.*, (SELECT COUNT(id) FROM tickets WHERE client_id = c.id AND status != 'Cerrado') as active_tickets
+                    FROM clients c
+                    WHERE c.id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result->num_rows > 0) {
+                echo json_encode(['success' => true, 'data' => $result->fetch_assoc()]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Cliente no encontrado']);
             }
-
-            jsonResponse($client ?: ['error' => 'Cliente no encontrado'], $client ? 200 : 404);
+            $stmt->close();
         } else {
-            $stmt = $pdo->query("SELECT c.*, 
-                                (SELECT COUNT(*) FROM stores WHERE client_id = c.id) as stores_count,
-                                (SELECT COUNT(*) FROM tickets WHERE client_id = c.id AND status NOT IN ('Cerrado', 'Solucionado')) as active_tickets
-                                FROM clients c ORDER BY c.name");
-            jsonResponse($stmt->fetchAll());
+            // Obtener todos los clientes
+            $sql = "SELECT c.*, (SELECT COUNT(id) FROM tickets WHERE client_id = c.id AND status != 'Cerrado') as active_tickets
+                    FROM clients c
+                    ORDER BY c.client_name ASC";
+            $result = $conn->query($sql);
+            $clients = [];
+            while ($row = $result->fetch_assoc()) {
+                $clients[] = $row;
+            }
+            echo json_encode(['success' => true, 'data' => $clients]);
         }
         break;
 
     case 'POST':
-        $data = getJsonInput();
-        $stmt = $pdo->prepare("INSERT INTO clients (name, logo_url, status, contact_email, contact_phone, notes) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $data['name'] ?? 'Nuevo Cliente',
-            $data['logo_url'] ?? null,
-            $data['status'] ?? 'Active',
-            $data['contact_email'] ?? null,
-            $data['contact_phone'] ?? null,
-            $data['notes'] ?? null
-        ]);
-        jsonResponse(['success' => true, 'id' => $pdo->lastInsertId()], 201);
+        // Crear un nuevo cliente
+        $data = json_decode(file_get_contents('php://input'), true);
+        $sql = "INSERT INTO clients (client_name, contact_person, email, phone, logo_url, status)
+                VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssssss", $data['client_name'], $data['contact_person'], $data['email'], $data['phone'], $data['logo_url'], $data['status']);
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Cliente creado con éxito', 'id' => $stmt->insert_id]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al crear el cliente: ' . $stmt->error]);
+        }
+        $stmt->close();
         break;
 
     case 'PUT':
-        $data = getJsonInput();
-        if (!isset($data['id'])) {
-            jsonResponse(['error' => 'ID requerido'], 400);
+        // Actualizar un cliente existente
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = intval($data['id']);
+        $sql = "UPDATE clients SET client_name = ?, contact_person = ?, email = ?, phone = ?, logo_url = ?, status = ?
+                WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("ssssssi", $data['client_name'], $data['contact_person'], $data['email'], $data['phone'], $data['logo_url'], $data['status'], $id);
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Cliente actualizado con éxito']);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al actualizar el cliente: ' . $stmt->error]);
         }
-        $fields = [];
-        $values = [];
-        $allowed = ['name', 'logo_url', 'status', 'contact_email', 'contact_phone', 'notes'];
-        foreach ($allowed as $field) {
-            if (isset($data[$field])) {
-                $fields[] = "$field = ?";
-                $values[] = $data[$field];
-            }
-        }
-        if (empty($fields)) {
-            jsonResponse(['error' => 'No hay campos para actualizar'], 400);
-        }
-        $values[] = $data['id'];
-        $stmt = $pdo->prepare("UPDATE clients SET " . implode(', ', $fields) . " WHERE id = ?");
-        $stmt->execute($values);
-        jsonResponse(['success' => true, 'message' => 'Cliente actualizado']);
+        $stmt->close();
         break;
 
     case 'DELETE':
-        $id = $_GET['id'] ?? null;
-        if (!$id) {
-            jsonResponse(['error' => 'ID requerido'], 400);
+        // Eliminar un cliente
+        if (isset($_GET['id'])) {
+            $id = intval($_GET['id']);
+            $sql = "DELETE FROM clients WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("i", $id);
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Cliente eliminado con éxito']);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Error al eliminar el cliente: ' . $stmt->error]);
+            }
+            $stmt->close();
+        } else {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'ID de cliente no proporcionado']);
         }
-        $stmt = $pdo->prepare("DELETE FROM clients WHERE id = ?");
-        $stmt->execute([$id]);
-        jsonResponse(['success' => true, 'message' => 'Cliente eliminado']);
         break;
 
     default:
-        jsonResponse(['error' => 'Método no permitido'], 405);
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+        break;
 }
+
+$conn->close();
 ?>

@@ -37,8 +37,9 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const data = await api.getTickets();
-        if (Array.isArray(data)) {
+        const response = await api.getTickets();
+        if (response.success && Array.isArray(response.data)) {
+          const data = response.data;
           setTickets(data);
 
           // Calcular estadísticas reales

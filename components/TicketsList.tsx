@@ -19,13 +19,16 @@ export const TicketsList: React.FC = () => {
     const fetchTickets = async () => {
       setLoading(true);
       try {
-        const data = await api.getTickets();
-        if (Array.isArray(data)) {
-          setTickets(data);
+        const response = await api.getTickets();
+        if (response.success && Array.isArray(response.data)) {
+          setTickets(response.data);
         } else {
+          // Si la API falla o no devuelve datos, usamos los mocks como respaldo
+          console.warn('API non-successful or data is not an array, falling back to mock data.');
           setTickets(MOCK_TICKETS as any);
         }
-      } catch (e) {
+      } catch (error) {
+        console.error('Failed to fetch tickets, falling back to mock data:', error);
         setTickets(MOCK_TICKETS as any);
       }
       setLoading(false);
